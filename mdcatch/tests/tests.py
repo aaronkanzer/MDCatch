@@ -26,11 +26,13 @@
 
 import os
 from glob import glob
+import tempfile
 import unittest
 
 from ..config import *
 from ..utils.misc import getUsername
 from ..parser import Parser
+from ..utils.feixml import parseXml
 
 
 class TestParser(unittest.TestCase):
@@ -81,3 +83,20 @@ class TestParser(unittest.TestCase):
         print("\nFinal parameters:\n")
         for k, v in sorted(model.acqDict.items()):
             print(k, v)
+
+
+EPU_XML_PHASE_PLATE = """<MicroscopeImage xmlns="http://schemas.datacontract.org/2004/07/Fei.SharedObjects" xmlns:i="http://www.w3.org/2001/XMLSchema-instance"><CustomData xmlns:a="http://schemas.microsoft.com/2003/10/Serialization/Arrays"><a:KeyValueOfstringanyType><a:Key>PhasePlateUsed</a:Key><a:Value i:type="b:boolean" xmlns:b="http://www.w3.org/2001/XMLSchema">true</a:Value></a:KeyValueOfstringanyType><a:KeyValueOfstringanyType><a:Key>PhasePlateApertureName</a:Key><a:Value i:type="b:string" xmlns:b="http://www.w3.org/2001/XMLSchema">Ph P4</a:Value></a:KeyValueOfstringanyType><a:KeyValueOfstringanyType><a:Key>PhasePlatePosition</a:Key><a:Value i:type="b:int" xmlns:b="http://www.w3.org/2001/XMLSchema">3</a:Value></a:KeyValueOfstringanyType></CustomData></MicroscopeImage>"""
+
+
+class TestFeiXml(unittest.TestCase):
+    def test_phase_plate_without_objective_aperture(self):
+        """ Older EPU versions write the phase plate keys but no Aperture[OBJ].Name. """
+        with tempfile.TemporaryDirectory() as tmpdir:
+            fn = os.path.join(tmpdir, "FoilHole_1_Data_2_3_20200101_000000.xml")
+            with open(fn, "w") as f:
+                f.write(EPU_XML_PHASE_PLATE)
+            acqDict = parseXml(fn)
+
+        self.assertEqual(acqDict['PhasePlateUsed'], 'true')
+        self.assertEqual(acqDict['PhasePlateNumber'], 'P4')
+        self.assertEqual(acqDict['PhasePlatePosition'], '3')

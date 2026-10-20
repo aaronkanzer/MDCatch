@@ -128,14 +128,16 @@ def parseXml(fn):
         acqDict['Dose'] = float(customDict['Dose']) * math.pow(10, -20)
     if 'PhasePlateUsed' in customDict:
         acqDict['PhasePlateUsed'] = customDict['PhasePlateUsed']
+
+        if customDict['PhasePlateUsed'] == 'true':
+            if 'PhasePlateApertureName' in customDict:
+                acqDict['PhasePlateNumber'] = customDict['PhasePlateApertureName'].split(" ")[-1]
+            if 'PhasePlatePosition' in customDict:
+                acqDict['PhasePlatePosition'] = customDict['PhasePlatePosition']
     if 'Aperture[C2].Name' in customDict:
         acqDict['C2Aperture'] = customDict['Aperture[C2].Name']
     if 'Aperture[OBJ].Name' in customDict:
         acqDict['ObjAperture'] = customDict['Aperture[OBJ].Name']
-
-        if customDict['PhasePlateUsed'] == 'true':
-            acqDict['PhasePlateNumber'] = customDict['PhasePlateApertureName'].split(" ")[-1]
-            acqDict['PhasePlatePosition'] = customDict['PhasePlatePosition']
 
     if DEBUG:
         for k, v in sorted(acqDict.items()):
