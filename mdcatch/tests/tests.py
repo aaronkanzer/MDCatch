@@ -26,11 +26,13 @@
 
 import os
 from glob import glob
+import tempfile
 import unittest
 
 from ..config import *
 from ..utils.misc import getUsername
 from ..parser import Parser
+from ..utils.mdoc import parseMdoc
 
 
 class TestParser(unittest.TestCase):
@@ -81,3 +83,31 @@ class TestParser(unittest.TestCase):
         print("\nFinal parameters:\n")
         for k, v in sorted(model.acqDict.items()):
             print(k, v)
+
+
+class TestMdoc(unittest.TestCase):
+    def _parse(self, text):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            fn = os.path.join(tmpdir, "movie.tif.mdoc")
+            with open(fn, "w") as f:
+                f.write(text)
+            return parseMdoc(fn)
+
+    def test_scope_id_from_frame_mdoc_title(self):
+        """ Frame mdocs write the title line without brackets. """
+        acqDict = self._parse("T = SerialEM: Acquired on Titan Krios D3593    11-Aug-19  14:13:22\n"
+                              "Voltage = 300\n\n[FrameSet = 0]\nPixelSpacing = 0.5\n")
+        self.assertEqual(acqDict['MicroscopeID'], '3593')
+
+    def test_scope_id_from_tilt_series_title(self):
+        acqDict = self._parse("PixelSpacing = 5.4\n\n"
+                              "[T = SerialEM: Acquired on Titan Krios D3593    11-Aug-19  14:13:22]\n\n"
+                              "[T =     Tilt axis angle = 85.3, binning = 4  spot = 8  camera = 2]\n\n"
+                              "[ZValue = 0]\nPixelSpacing = 5.4\n")
+        self.assertEqual(acqDict['MicroscopeID'], '3593')
+
+    def test_title_without_scope_id(self):
+        """ A title with no D-number gives the usual error, not AttributeError. """
+        with self.assertRaises(SystemExit):
+            self._parse("[T = SerialEM: Digitized on EMBL Krios    30-Nov-15  15:14:20]\n\n"
+                        "[ZValue = 0]\nPixelSpacing = 5.4\n")

@@ -44,9 +44,12 @@ def parseMdoc(fn):
         regex = re.compile(REGEX_MDOC_VAR)
         scope_id = None
         for line in fname:
-            if "[T = SerialEM" in line:
+            # tilt-series mdocs write "[T = SerialEM: ...]",
+            # frame mdocs write "T = SerialEM: ..." without brackets
+            if line.lstrip("[").startswith("T = SerialEM"):
                 match = re.search("D[0-9]{3,10}", line)
-                scope_id = match.group().replace('D', '')
+                if match:
+                    scope_id = match.group().replace('D', '')
             else:
                 match = regex.match(line)
                 if match and match.groupdict()['var'] in SERIALEM_PARAMS:
